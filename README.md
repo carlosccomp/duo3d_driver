@@ -2,6 +2,13 @@
 
 The `duo3d_driver` ROS node interfaces with DUO SDK and publishes stereo images, disparity, point cloud, and IMU data from the DUO3D sensor. This package is build on Ubuntu 16.04.1 LTS x64 running ROS Kinetic.
 
+##Changes from this fork
+
+New topic added:
+
+* /duo3d/depth/image_32fc1 (sensor_msgs/Image)
+Floating point (32FC1) disparity map
+
 ##Introduction
 The DUO MLX is an ultra-compact imaging sensor with global shutter and a standard USB interface for ease of use and connectivity. The DUO is intended for use in research, autonomous navigation, robotics and industrial areas. The camera's high speed and small size make it ideal for existing and new use cases for vision based applications.
 

@@ -132,6 +132,12 @@ class DUO3DDriver
 
     // Image publishers
     image_transport::Publisher _pub_image[ITEM_COUNT-1];
+
+    // FORK CHANGE #1
+    // 32f depth map publisher
+    image_transport::Publisher _pub_depth32f;
+    // END
+
     // Camera info publishers
     ros::Publisher _pub_cam_info[ITEM_COUNT-1];
     // Camera info messages
@@ -154,7 +160,7 @@ public:
           _nh(NODE_NAME),
           _frame_rate(30),
           _image_size({640, 480})
-	{
+    {
         // Build color lookup table for depth display
         _colorLut = Mat(Size(256, 1), CV_8UC3);
         for(int i = 0; i < 256; i++)
@@ -174,6 +180,11 @@ public:
             else
                 _pub_image[i] = itrans.advertise(topic_name[i], 16);
         }
+
+        // FORK CHANGE #2
+        _pub_depth32f = itrans.advertise("depth/image_32fc1", 16);
+        // END
+
         for(int i = 0; i < cam_info_topic_name.size(); i++)
             _pub_cam_info[i] = _nh.advertise<sensor_msgs::CameraInfo>(cam_info_topic_name[i], 1);
     }
@@ -287,8 +298,12 @@ protected:
 
     void dense3dCallback(const PDense3DFrame pFrame)
     {
+        // FORK CHANGE #3
         bool needDense3d = (_pub_image[DEPTH].getNumSubscribers() > 0) ||
-                           (_pub_point_cloud.getNumSubscribers() > 0);
+                           (_pub_point_cloud.getNumSubscribers() > 0) ||
+                           (_pub_depth32f.getNumSubscribers() > 0);
+        // END
+
         // Enable Dense3d processing
         SetDense3DProcessing(_dense3dInstance, needDense3d);
 
@@ -343,10 +358,16 @@ protected:
             if((i == DEPTH) && pFrame->dense3dDataValid)
             {
                 Mat disp8;
+
                 Mat(size, CV_32FC1, pFrame->disparityData).convertTo(disp8, CV_8UC1, 255.0/(pFrame->dense3dParams.numDisparities*16.0));
                 Mat rgbDepth;
                 cvtColor(disp8, rgbDepth, cv::COLOR_GRAY2BGR);
                 LUT(rgbDepth, _colorLut, rgbDepth);
+
+                // FORK CHANGE #4
+                _pub_depth32f.publish(cv_bridge::CvImage(header, "32FC1", Mat(size, CV_32FC1, pFrame->disparityData)).toImageMsg());
+                // END
+
                 _pub_image[i].publish(cv_bridge::CvImage(header, sensor_msgs::image_encodings::RGB8, rgbDepth).toImageMsg());
                 _msg_cam_info[i].header = header;
                 _pub_cam_info[i].publish(_msg_cam_info[i]);
@@ -520,5 +541,5 @@ int main(int argc, char **argv)
     ros::init(argc, argv, NODE_NAME);
     duo3d_driver::DUO3DDriver duo;
     duo.run();
-	return 0;
+    return 0;
 }
